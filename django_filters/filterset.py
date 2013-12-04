@@ -92,6 +92,43 @@ def filters_for_model(model, fields=None, exclude=None, filter_for_field=None,
             field_dict[f] = filter_
     return field_dict
 
+def get_select_related_filters(select_related_fields, name):
+    """
+        Provides OneToOneField and ForeignKey, that differs by the ones defined
+    in FILTER_FOR_DBFIELD_DEFAULTS by changing the extra['queryset'] to use
+    select_related on the manager before the filter, using the argument
+    (that matches the current field name) configured in select_related_fields.
+    """
+    def _select_related(queryset):
+        """
+        Actually runs select_related on the given manager (in the queryset
+        keyword argument), with as arguments, the corresponding value for the
+        field name in select_related_fields.
+
+        """
+        args = select_related_fields.get(name)
+        # If the current field name does not match a key in select_related_fields, do not
+        # replace the existing filters
+        if args is not None:
+            # The field matches, we have arguments defined for select_related
+            queryset = queryset.select_related(*args)
+            return queryset
+        return queryset
+    # We only override OneToOne and ForeignKey, because select_related is only
+    # availbale for these fields
+    return {  models.OneToOneField : { 'filter_class': ModelChoiceFilter,
+                                       'extra': lambda f: {
+                                           'queryset': _select_related(f.rel.to._default_manager).complex_filter(f.rel.limit_choices_to),
+                                           'to_field_name': f.rel.field_name,
+                                       },
+                                   },
+              models.ForeignKey : { 'filter_class': ModelChoiceFilter,
+                                    'extra': lambda f: {
+                                        'queryset': _select_related(f.rel.to._default_manager).complex_filter(f.rel.limit_choices_to),
+                                        'to_field_name': f.rel.field_name
+                                    },
+                                },
+    }
 
 class FilterSetOptions(object):
     def __init__(self, options=None):
@@ -135,6 +172,7 @@ class FilterSetMetaclass(type):
         new_class.declared_filters = declared_filters
         new_class.base_filters = filters
         return new_class
+
 
 
 FILTER_FOR_DBFIELD_DEFAULTS = {
