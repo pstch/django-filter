@@ -266,6 +266,7 @@ class BaseFilterSet(object):
     filter_overrides = {}
     order_by_field = ORDER_BY_FIELD
     strict = True
+    select_related = None
 
     def __init__(self, data=None, queryset=None, prefix=None, strict=None):
         self.is_bound = data is not None
@@ -394,6 +395,11 @@ class BaseFilterSet(object):
     def filter_for_field(cls, f, name):
         filter_for_field = dict(FILTER_FOR_DBFIELD_DEFAULTS)
         filter_for_field.update(cls.filter_overrides)
+
+        if cls.select_related:
+            # select_related is defined in the filterset
+            # we update the filters in filter_for_field with the ones that use select_related
+            filter_for_field.update(get_select_related_filters(cls.select_related, name))
 
         default = {
             'name': name,
