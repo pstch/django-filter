@@ -49,6 +49,12 @@ Filters take a ``lookup_type`` argument which specifies what lookup type to
 use with Django's ORM.  So here when a user entered a price it would show all
 Products with a price less than that.
 
+Filters can take a ``select_related`` attribute : a dict to allow to use 
+select_related when retrieving the queryset for model fields. The key should
+match the field name (and can follow relationships, ex: ``group__category``),
+and its value should be the list of fields to pass as arguments to 
+``select_related``.
+
 Items in the ``fields`` sequence in the ``Meta`` class may include
 "relationship paths" using Django's ``__`` syntax to filter on fields on a
 related model::
